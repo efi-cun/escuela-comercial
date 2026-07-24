@@ -31,7 +31,13 @@ try {
     }
     
     if (-not $file2) {
-        Write-Error "No se encontró ningún archivo de Excel que termine en '2.xlsx' (ej. BASE_ONBOARDING_ESCUELA_COMERCIAL (4) 2.xlsx)"
+        Write-Output "---------------------------------------------------------"
+        Write-Output "INFO: No se encontro ningun archivo Excel que termine en '2.xlsx'"
+        Write-Output "  (por ejemplo: 'BASE_ONBOARDING_ESCUELA_COMERCIAL (4) 2.xlsx')"
+        Write-Output "  Si deseas usar el segundo Dashboard, crea una copia de tu Excel"
+        Write-Output "  y renombrala añadiendo un 2 al final."
+        Write-Output "  Se omitira la actualizacion de 'data2.js' por ahora."
+        Write-Output "---------------------------------------------------------"
         return
     }
     

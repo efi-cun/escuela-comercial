@@ -21,7 +21,15 @@ try {
     Write-Output "Iniciando lectura de archivos Excel..."
     
     # Resolver la ruta de los archivos Excel en la carpeta actual
-    $file1 = Get-Item "BASE_ONBOARDING_ESCUELA_COMERCIAL (4).xlsx" -ErrorAction Stop
+    $file1 = Get-Item "BASE_ONBOARDING_ESCUELA_COMERCIAL (4).xlsx" -ErrorAction SilentlyContinue
+    if (-not $file1) {
+        Write-Output "---------------------------------------------------------"
+        Write-Output "ERROR: No se encontro el archivo original:"
+        Write-Output "  'BASE_ONBOARDING_ESCUELA_COMERCIAL (4).xlsx'"
+        Write-Output "Por favor colocalo en esta carpeta y vuelve a intentarlo."
+        Write-Output "---------------------------------------------------------"
+        return
+    }
     $tempPath1 = "C:\Users\yeison_oyolat\.gemini\antigravity-cli\brain\a1d668f2-5a2e-45c7-8fa4-848e96332c55\scratch\base1.xlsx"
     Copy-Item $file1.FullName $tempPath1 -Force
     

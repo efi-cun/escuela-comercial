@@ -182,9 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 8. Renderizar tarjetas de candidatos (Pestaña 1)
-    function renderCandidates() {
-        // Filtrar datos
-        const filtered = registro.filter(r => {
+    function getFilteredCandidates() {
+        return registro.filter(r => {
             const matchesSearch = r.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
                                  r.documento.includes(searchQuery);
             const matchesCampana = !filterCampana || r.campana === filterCampana;
@@ -195,6 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return matchesSearch && matchesCampana && matchesCargo && matchesEstado;
         });
+    }
+
+    function renderCandidates() {
+        // Filtrar datos
+        const filtered = getFilteredCandidates();
 
         cardGrid.innerHTML = '';
 
@@ -285,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 9. Renderizar Tarjetas OJT (Pestaña 2)
     function renderOjtCards() {
+        if (!ojtGrid) return;
         ojtGrid.innerHTML = '';
 
         // Filtrar ojt
@@ -567,6 +572,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let myChart2 = null;
 
     function renderCharts() {
+        const chartsGrid = document.querySelector('#charts-modal-overlay .charts-grid');
+        const modalBody = document.querySelector('#charts-modal-overlay .modal-body');
+        
+        // Obtener candidatos filtrados actualmente
+        const filtered = getFilteredCandidates();
+        
+        if (filtered.length === 0) {
+            // Ocultar cuadrícula de gráficos y mostrar mensaje de "No hay datos"
+            if (chartsGrid) chartsGrid.style.display = 'none';
+            let noDataEl = document.getElementById('charts-modal-no-data');
+            if (!noDataEl) {
+                noDataEl = document.createElement('div');
+                noDataEl.id = 'charts-modal-no-data';
+                noDataEl.style.cssText = 'text-align: center; padding: 4rem 2rem; color: var(--text-muted); font-size: 1.1rem; font-family: "Inter";';
+                noDataEl.innerHTML = `
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊❌</div>
+                    <strong>No hay datos para mostrar</strong>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-light);">Intenta limpiar o cambiar los filtros de búsqueda para ver estadísticas.</p>
+                `;
+                modalBody.appendChild(noDataEl);
+            } else {
+                noDataEl.style.display = 'block';
+            }
+            return;
+        } else {
+            // Mostrar cuadrícula de gráficos y ocultar mensaje de "No hay datos"
+            if (chartsGrid) chartsGrid.style.display = 'grid';
+            const noDataEl = document.getElementById('charts-modal-no-data');
+            if (noDataEl) noDataEl.style.display = 'none';
+        }
+
         const ctx1 = document.getElementById('chart-campanas').getContext('2d');
         const ctx2 = document.getElementById('chart-aprobacion').getContext('2d');
 
@@ -574,9 +610,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (myChart1) myChart1.destroy();
         if (myChart2) myChart2.destroy();
 
-        // Datos Gráfico 1: Distribución de Campañas
+        // Datos Gráfico 1: Distribución de Campañas (con datos filtrados!)
         const campanaCounts = {};
-        registro.forEach(r => {
+        filtered.forEach(r => {
             campanaCounts[r.campana] = (campanaCounts[r.campana] || 0) + 1;
         });
 
@@ -589,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels: labels1,
                 datasets: [{
                     data: data1,
-                    backgroundColor: ['#2b9348', '#55a630', '#80b918', '#3b82f6', '#f59e0b', '#ef4444'],
+                    backgroundColor: ['#2b9348', '#55a630', '#80b918', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'],
                     borderWidth: 2,
                     borderColor: '#ffffff'
                 }]
@@ -597,30 +633,63 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onHover: (event, chartElement) => {
+                    event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const clickedCampaign = labels1[index];
+                        
+                        // Filtrar por la campaña pulsada
+                        selectCampana.value = clickedCampaign;
+                        filterCampana = clickedCampaign;
+                        applyAllFilters();
+                        
+                        // Cerrar modal
+                        closeChartsModal();
+                    }
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            font: { family: 'Inter', size: 12 },
+                            font: { family: 'Inter', size: 11 },
                             color: '#1a2e1a'
                         }
                     },
                     title: {
                         display: true,
                         text: 'Distribución de Participantes por Campaña',
-                        font: { family: 'Plus Jakarta Sans', size: 15, weight: 'bold' },
+                        font: { family: 'Plus Jakarta Sans', size: 14, weight: 'bold' },
                         color: '#2b9348',
-                        padding: { bottom: 15 }
+                        padding: { bottom: 10 }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(26, 46, 26, 0.9)',
+                        titleFont: { family: 'Plus Jakarta Sans', weight: 'bold' },
+                        bodyFont: { family: 'Inter' },
+                        padding: 10,
+                        cornerRadius: 6,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw;
+                                const total = data1.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((val / total) * 100);
+                                return ` Participantes: ${val} (${percentage}%)`;
+                            }
+                        }
                     }
                 }
             }
         });
 
-        // Datos Gráfico 2: Tasa de Aprobación por Campaña
+        // Datos Gráfico 2: Tasa de Aprobación por Campaña (con datos filtrados!)
         const campanaAprobados = {};
         const campanaTotales = {};
         
-        registro.forEach(r => {
+        filtered.forEach(r => {
             campanaTotales[r.campana] = (campanaTotales[r.campana] || 0) + 1;
             if (r.aprobado) {
                 campanaAprobados[r.campana] = (campanaAprobados[r.campana] || 0) + 1;
@@ -647,42 +716,67 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: 'Aprobados',
                         data: aprobadosData,
                         backgroundColor: '#10b981',
-                        borderRadius: 6
+                        borderRadius: 4
                     },
                     {
                         label: 'No Aprobados',
                         data: noAprobadosData,
                         backgroundColor: '#ef4444',
-                        borderRadius: 6
+                        borderRadius: 4
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onHover: (event, chartElement) => {
+                    event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const clickedCampaign = labels2[index];
+                        
+                        // Filtrar por la campaña pulsada
+                        selectCampana.value = clickedCampaign;
+                        filterCampana = clickedCampaign;
+                        applyAllFilters();
+                        
+                        // Cerrar modal
+                        closeChartsModal();
+                    }
+                },
                 scales: {
                     x: {
                         stacked: true,
-                        ticks: { color: '#4b5e3a' },
+                        ticks: { color: '#4b5e3a', font: { family: 'Inter', size: 10 } },
                         grid: { display: false }
                     },
                     y: {
                         stacked: true,
-                        ticks: { color: '#4b5e3a', stepSize: 1 },
+                        ticks: { color: '#4b5e3a', stepSize: 1, font: { family: 'Inter', size: 10 } },
                         grid: { color: 'rgba(43, 147, 72, 0.05)' }
                     }
                 },
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { font: { family: 'Inter', size: 12 } }
+                        labels: { font: { family: 'Inter', size: 11 } }
                     },
                     title: {
                         display: true,
                         text: 'Aprobación por Campaña',
-                        font: { family: 'Plus Jakarta Sans', size: 15, weight: 'bold' },
+                        font: { family: 'Plus Jakarta Sans', size: 14, weight: 'bold' },
                         color: '#2b9348',
-                        padding: { bottom: 15 }
+                        padding: { bottom: 10 }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(26, 46, 26, 0.9)',
+                        titleFont: { family: 'Plus Jakarta Sans', weight: 'bold' },
+                        bodyFont: { family: 'Inter' },
+                        padding: 10,
+                        cornerRadius: 6,
+                        displayColors: true
                     }
                 }
             }
@@ -709,5 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
     populateFilters();
     renderStats();
     renderCandidates();
-    renderOjtCards();
+    if (ojtGrid) {
+        renderOjtCards();
+    }
 });
