@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escuela Comercial · Dashboard de Onboarding</title>
+    <!-- CSS Separado -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js para los gráficos interactivos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header de la Aplicación -->
+        <header class="app-header">
+            <div class="brand-section">
+                <div class="brand-logo">C</div>
+                <div class="brand-title">
+                    <h1>Escuela Comercial</h1>
+                    <p>Dashboard de Seguimiento de Onboarding · Corporación Unificada Nacional de Educación Superior (CUN)</p>
+                </div>
+            </div>
+            <div class="header-meta">
+                <div>Datos del archivo Excel:</div>
+                <div class="update-badge">Actualizado: <span id="update-date">Cargando...</span></div>
+            </div>
+        </header>
+
+        <!-- Navegación por Pestañas (Dinamismo) -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="registro">Registro</button>
+            <button class="tab-btn" data-tab="ojt">Aprobados en OJT</button>
+            <button class="tab-btn" data-tab="graficos">Estadísticas y Análisis</button>
+        </nav>
+
+        <!-- Tarjetas de Estadísticas Globales (Hero Stats) -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-label">Total Participantes</span>
+                    <span class="stat-value" id="stat-total-registered">—</span>
+                </div>
+                <div class="stat-icon icon-blue">👥</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-label">Total Aprobados</span>
+                    <span class="stat-value" id="stat-total-approved">—</span>
+                </div>
+                <div class="stat-icon icon-green">✅</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-label">Tasa de Aprobación</span>
+                    <span class="stat-value" id="stat-approval-rate">—</span>
+                </div>
+                <div class="stat-icon icon-orange">📈</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-label">Nota Promedio</span>
+                    <span class="stat-value" id="stat-average-grade">—</span>
+                </div>
+                <div class="stat-icon icon-purple">🎓</div>
+            </div>
+        </section>
+
+        <!-- Barra de Búsqueda y Filtros Interactivos -->
+        <section class="filter-card">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="search-input" placeholder="Buscar por nombre o cédula...">
+            </div>
+            <div class="filter-selects">
+                <select id="select-campana" class="filter-select">
+                    <option value="">Campaña: Todas</option>
+                </select>
+                <select id="select-cargo" class="filter-select">
+                    <option value="">Cargo: Todos</option>
+                </select>
+                <select id="select-estado" class="filter-select">
+                    <option value="">Estado: Todos</option>
+                    <option value="aprobado">Aprobado</option>
+                    <option value="no_aprobado">No Aprobado</option>
+                </select>
+                <button id="btn-clear-filters" class="btn-clear">Limpiar Filtros</button>
+            </div>
+        </section>
+
+        <!-- Contenido Pestaña 1: Registro / Participantes (Grid de Tarjetas) -->
+        <div id="tab-registro" class="tab-content active">
+            <div id="candidate-grid" class="candidate-grid">
+                <!-- Las tarjetas de candidatos se renderizarán dinámicamente aquí -->
+            </div>
+        </div>
+
+        <!-- Contenido Pestaña 2: Aprobados en OJT (Tarjetas) -->
+        <div id="tab-ojt" class="tab-content">
+            <div id="ojt-grid" class="candidate-grid">
+                <!-- Las tarjetas de aprobados OJT se renderizarán dinámicamente aquí -->
+            </div>
+        </div>
+
+        <!-- Contenido Pestaña 3: Estadísticas y Gráficos (Chart.js) -->
+        <div id="tab-graficos" class="tab-content">
+            <div class="chart-container-wrapper">
+                <h2>Análisis de Resultados de Onboarding</h2>
+                <div class="charts-grid">
+                    <div class="chart-box">
+                        <canvas id="chart-campanas"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="chart-aprobacion"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detallado (Interactividad Premium) -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <button id="modal-close" class="modal-close" title="Cerrar ventana">&times;</button>
+            <div class="modal-header-banner"></div>
+            
+            <div class="modal-body">
+                <div class="modal-profile">
+                    <div id="modal-avatar-container">
+                        <!-- Avatar renderizado dinámicamente -->
+                    </div>
+                    <div class="modal-name-section">
+                        <h2 id="modal-name" class="modal-name">Nombre del Candidato</h2>
+                        <span id="modal-role" class="modal-role">Cargo del Candidato</span>
+                    </div>
+                </div>
+
+                <!-- Puntuación General y Barra de Progreso -->
+                <div class="main-score-bar-wrapper">
+                    <div class="score-bar-meta">
+                        <span>Nota Final Consolidada</span>
+                        <div>
+                            <span id="modal-score-val" style="font-size:1.2rem; font-weight:800; color:var(--primary-color);">0%</span>
+                            <span id="modal-score-status" style="font-size:0.8rem; margin-left:0.3rem;"></span>
+                        </div>
+                    </div>
+                    <div class="score-bar-container">
+                        <div id="modal-score-fill" class="score-bar-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="grid-2col">
+                    <!-- Columna Izquierda: Información de contacto -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Datos Personales</div>
+                        <div class="info-row">
+                            <span class="info-label">Cédula:</span>
+                            <span class="info-value" id="modal-doc">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Campaña:</span>
+                            <span class="info-value" id="modal-campana">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">F. Ingreso:</span>
+                            <span class="info-value" id="modal-date">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Correo:</span>
+                            <span class="info-value" id="modal-email" style="font-size: 0.8rem; word-break: break-all;">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Teléfono:</span>
+                            <span class="info-value" id="modal-phone">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Detalle de Notas -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Calificaciones Detalladas</div>
+                        <div class="rubrics-list">
+                            <div class="rubric-item">
+                                <span class="rubric-name">Presentación Personal<span class="rubric-weight">(5%)</span></span>
+                                <span class="rubric-score" id="score-pres">—</span>
+                            </div>
+                            <div class="rubric-item">
+                                <span class="rubric-name">Participación y Puntualidad<span class="rubric-weight">(10%)</span></span>
+                                <span class="rubric-score" id="score-part">—</span>
+                            </div>
+                            <div class="rubric-item">
+                                <span class="rubric-name">Evaluación Conocimiento<span class="rubric-weight">(5%)</span></span>
+                                <span class="rubric-score" id="score-conoc">—</span>
+                            </div>
+                            <div class="rubric-item">
+                                <span class="rubric-name">Evaluación Técnica<span class="rubric-weight">(10%)</span></span>
+                                <span class="rubric-score" id="score-tec">—</span>
+                            </div>
+                            <div class="rubric-item">
+                                <span class="rubric-name">Simulación con IA<span class="rubric-weight">(20%)</span></span>
+                                <span class="rubric-score" id="score-sim">—</span>
+                            </div>
+                            <div class="rubric-item">
+                                <span class="rubric-name">Clínica de Ventas / Final<span class="rubric-weight">(50%)</span></span>
+                                <span class="rubric-score" id="score-final">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <div class="modal-section">
+                    <div class="modal-section-title">Observaciones de Formación</div>
+                    <div id="modal-obs-box" class="observations-box">
+                        Sin observaciones registradas.
+                    </div>
+                </div>
+
+                <!-- Botón de Certificado / PDF (si aplica) -->
+                <div id="modal-doc-box" class="modal-section" style="display: none;">
+                    <!-- Se inyecta botón de ver PDF dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de la Aplicación -->
+    <!-- data.js contiene la variable ONBOARDING_DATA -->
+    <script src="data.js"></script>
+    <!-- app.js contiene la lógica del dashboard -->
+    <script src="app.js"></script>
+</body>
+</html>
