@@ -121,6 +121,13 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 15px rgba(43, 147, 72, 0.3);
 }
 
+.brand-logo-img {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(43, 147, 72, 0.15));
+}
+
 .brand-title h1 {
   font-size: 1.5rem;
   color: var(--primary-color);
@@ -576,26 +583,26 @@ h1, h2, h3, h4, h5, h6 {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: rgba(0,0,0,0.04);
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
   cursor: pointer;
-  color: var(--text-muted);
+  color: white;
   transition: var(--transition);
   z-index: 10;
 }
 
 .modal-close:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
 }
 
 .modal-header-banner {
   background: var(--primary-gradient);
-  height: 90px;
+  height: 140px;
   border-top-left-radius: calc(var(--radius-lg) - 1px);
   border-top-right-radius: calc(var(--radius-lg) - 1px);
 }
@@ -609,7 +616,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: flex-end;
   gap: 1.5rem;
-  margin-top: -45px;
+  margin-top: -65px;
   margin-bottom: 2rem;
 }
 
@@ -639,18 +646,19 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .modal-name-section {
-  padding-bottom: 0.4rem;
+  padding-bottom: 1.5rem;
 }
 
 .modal-name {
   font-size: 1.3rem;
   font-weight: 800;
-  color: var(--text-main);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .modal-role {
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
 }
 

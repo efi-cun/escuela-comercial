@@ -52,10 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const photoMap = {
         "SARA ISABEL MOLINA SANCHEZ": { file: "fotos/SARA ISABEL MOLINA SÁNCHEZ.jpeg", isPdf: false },
         "HELEN SOFIA CALDERON CAMELO": { file: "fotos/HELEN SOFIA CALDERON CAMELO.jpeg", isPdf: false },
-        "THOMAS BERNARDO FERNANDEZ LAVERDE": { file: "fotos/THOMAS BERNADO FERNANDEZ LAVERDE.pdf", isPdf: true },
-        "JULIE CATERINE VILLALOBOS ORTIZ": { file: "fotos/JULIE CATERINE VILLALOBOS ORTIZ.pdf", isPdf: true },
+        "THOMAS BERNARDO FERNANDEZ LAVERDE": { file: "fotos/THOMAS BERNADO FERNANDEZ LAVERDE.jpeg", isPdf: false },
+        "JULIE CATERINE VILLALOBOS ORTIZ": { file: "fotos/JULIE CATERINE VILLALOBOS ORTIZ.jpeg", isPdf: false },
         "PABLO STEVEN OCHOA RODRIGUEZ": { file: "fotos/PABLO STEVEN OCHOA RODRIGUEZ.jpeg", isPdf: false },
-        "JHON STIVEN MARIN VALENCIA": { file: "fotos/JHON STIVEN MARIN VALENCIA.pdf", isPdf: true },
+        "JHON STIVEN MARIN VALENCIA": { file: "fotos/JHON STIVEN MARIN VALENCIA.jpeg", isPdf: false },
         "YULIETH PAOLA RODRIGUEZ CANON": { file: "fotos/YULIETH PAOLA RODRIGUEZ CAÑON.jpeg", isPdf: false }
     };
 
