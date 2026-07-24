@@ -27,12 +27,7 @@
             </div>
         </header>
 
-        <!-- Navegación por Pestañas (Dinamismo) -->
-        <nav class="nav-tabs">
-            <button class="tab-btn active" data-tab="registro">Registro</button>
-            <button class="tab-btn" data-tab="ojt">Aprobados en OJT</button>
-            <button class="tab-btn" data-tab="graficos">Estadísticas y Análisis</button>
-        </nav>
+
 
         <!-- Tarjetas de Estadísticas Globales (Hero Stats) -->
         <section class="stats-grid">
@@ -50,14 +45,14 @@
                 </div>
                 <div class="stat-icon icon-green">✅</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="card-stat-approval" style="cursor: pointer;" title="Haga clic para ver gráficos">
                 <div class="stat-info">
                     <span class="stat-label">Tasa de Aprobación</span>
                     <span class="stat-value" id="stat-approval-rate">—</span>
                 </div>
                 <div class="stat-icon icon-orange">📈</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="card-stat-average" style="cursor: pointer;" title="Haga clic para ver gráficos">
                 <div class="stat-info">
                     <span class="stat-label">Nota Promedio</span>
                     <span class="stat-value" id="stat-average-grade">—</span>
@@ -88,33 +83,9 @@
             </div>
         </section>
 
-        <!-- Contenido Pestaña 1: Registro / Participantes (Grid de Tarjetas) -->
-        <div id="tab-registro" class="tab-content active">
-            <div id="candidate-grid" class="candidate-grid">
-                <!-- Las tarjetas de candidatos se renderizarán dinámicamente aquí -->
-            </div>
-        </div>
-
-        <!-- Contenido Pestaña 2: Aprobados en OJT (Tarjetas) -->
-        <div id="tab-ojt" class="tab-content">
-            <div id="ojt-grid" class="candidate-grid">
-                <!-- Las tarjetas de aprobados OJT se renderizarán dinámicamente aquí -->
-            </div>
-        </div>
-
-        <!-- Contenido Pestaña 3: Estadísticas y Gráficos (Chart.js) -->
-        <div id="tab-graficos" class="tab-content">
-            <div class="chart-container-wrapper">
-                <h2>Análisis de Resultados de Onboarding 2</h2>
-                <div class="charts-grid">
-                    <div class="chart-box">
-                        <canvas id="chart-campanas"></canvas>
-                    </div>
-                    <div class="chart-box">
-                        <canvas id="chart-aprobacion"></canvas>
-                    </div>
-                </div>
-            </div>
+        <!-- Registro de Candidatos (Grid de Tarjetas) -->
+        <div id="candidate-grid" class="candidate-grid">
+            <!-- Las tarjetas de candidatos se renderizarán dinámicamente aquí -->
         </div>
     </div>
 
@@ -221,6 +192,31 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Modal de Gráficos (Emergente) -->
+    <div id="charts-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <button id="charts-modal-close" class="modal-close" title="Cerrar gráficos">&times;</button>
+            <div class="modal-header-banner" style="height: 60px;"></div>
+            <div class="modal-body" style="padding: 1.5rem 2rem 2.5rem;">
+                <h2 style="color:var(--primary-color); margin-bottom: 1.5rem; text-align: center; font-family:'Plus Jakarta Sans';">Análisis Estadístico de Onboarding</h2>
+                <div class="charts-grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 2rem; margin-top: 1rem;">
+                    <div class="chart-box" style="min-height: 320px;">
+                        <canvas id="chart-campanas"></canvas>
+                    </div>
+                    <div class="chart-box" style="min-height: 320px;">
+                        <canvas id="chart-aprobacion"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox para ampliar fotos (Interactividad) -->
+    <div id="lightbox-overlay" class="modal-overlay" style="z-index: 1100;">
+        <button id="lightbox-close" class="modal-close lightbox-close" title="Cerrar imagen">&times;</button>
+        <img id="lightbox-img" class="lightbox-img" src="" alt="Foto Ampliada">
     </div>
 
     <!-- Scripts de la Aplicación -->

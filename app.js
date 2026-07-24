@@ -79,9 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let filterCargo = '';
     let filterEstado = '';
 
-    // 4. Referencias al DOM
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
     const searchInput = document.getElementById('search-input');
     const selectCampana = document.getElementById('select-campana');
     const selectCargo = document.getElementById('select-cargo');
@@ -93,6 +90,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal DOM
     const modal = document.getElementById('modal-overlay');
     const modalClose = document.getElementById('modal-close');
+
+    // Lightbox DOM
+    const lightboxOverlay = document.getElementById('lightbox-overlay');
+    const lightboxClose = document.getElementById('lightbox-close');
+    const lightboxImg = document.getElementById('lightbox-img');
+
+    // Funciones del Lightbox
+    function openLightbox(imgSrc) {
+        if (!imgSrc) return;
+        lightboxImg.src = imgSrc;
+        lightboxOverlay.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+        lightboxOverlay.style.display = 'none';
+        lightboxImg.src = '';
+    }
+
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightboxOverlay.addEventListener('click', (e) => {
+        if (e.target === lightboxOverlay) closeLightbox();
+    });
 
     // 5. Configurar Selects Dinámicos
     function populateFilters() {
@@ -251,6 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Agregar evento de click para abrir modal
             card.addEventListener('click', () => openModal(c));
 
+            // Si el avatar tiene foto, permitir hacer zoom al hacer click en él
+            const avatarEl = card.querySelector('.avatar');
+            if (avatarEl && photoInfo && !photoInfo.isPdf) {
+                avatarEl.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Evitar abrir el modal
+                    openLightbox(photoInfo.file);
+                });
+            }
+
             cardGrid.appendChild(card);
         });
     }
@@ -346,6 +374,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.querySelector('.card-action-btn').style.display = 'none';
             }
 
+            // Si el avatar tiene foto, permitir hacer zoom al hacer click en él
+            const avatarEl = card.querySelector('.avatar');
+            if (avatarEl && photoInfo && !photoInfo.isPdf) {
+                avatarEl.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Evitar abrir el modal
+                    openLightbox(photoInfo.file);
+                });
+            }
+
             ojtGrid.appendChild(card);
         });
     }
@@ -362,6 +399,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const initials = getInitials(candidate.nombre);
             const bg = getAvatarStyle(candidate.nombre);
             modalAvatarContainer.innerHTML = `<div class="modal-avatar-placeholder" style="background:${bg}">${initials}</div>`;
+        }
+
+        // Si hay una foto, permitir hacer zoom al hacer click en el avatar del modal
+        const modalAvatarEl = modalAvatarContainer.querySelector('.modal-avatar');
+        if (modalAvatarEl && photoInfo && !photoInfo.isPdf) {
+            modalAvatarEl.addEventListener('click', () => {
+                openLightbox(photoInfo.file);
+            });
         }
 
         // Datos Personales
@@ -385,15 +430,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (candidate.aprobado) {
             scoreFill.className = 'score-bar-fill';
             document.getElementById('modal-score-status').textContent = '(Aprobado)';
-            document.getElementById('modal-score-status').className = 'badge-approved';
-            document.getElementById('modal-score-status').style.padding = '0.2rem 0.6rem';
-            document.getElementById('modal-score-status').style.borderRadius = 'var(--radius-full)';
+            document.getElementById('modal-score-status').className = 'score-status-badge badge-approved';
         } else {
             scoreFill.className = 'score-bar-fill failed';
             document.getElementById('modal-score-status').textContent = '(No Aprobado)';
-            document.getElementById('modal-score-status').className = 'badge-failed';
-            document.getElementById('modal-score-status').style.padding = '0.2rem 0.6rem';
-            document.getElementById('modal-score-status').style.borderRadius = 'var(--radius-full)';
+            document.getElementById('modal-score-status').className = 'score-status-badge badge-failed';
         }
 
         // Rúbricas
@@ -445,22 +486,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modalClose.addEventListener('click', closeModal);
 
-    // 11. Gestión de Pestañas
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabButtons.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
+    // 11. Gestión de Modal de Gráficos (Emergente)
+    const chartsModal = document.getElementById('charts-modal-overlay');
+    const chartsModalClose = document.getElementById('charts-modal-close');
 
-            btn.classList.add('active');
-            const targetTab = btn.getAttribute('data-tab');
-            document.getElementById(`tab-${targetTab}`).classList.add('active');
-            currentTab = targetTab;
+    function openChartsModal() {
+        if (!chartsModal) return;
+        chartsModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        renderCharts();
+    }
 
-            if (currentTab === 'graficos') {
-                renderCharts();
-            }
+    function closeChartsModal() {
+        if (!chartsModal) return;
+        chartsModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    if (chartsModalClose) {
+        chartsModalClose.addEventListener('click', closeChartsModal);
+    }
+    if (chartsModal) {
+        chartsModal.addEventListener('click', (e) => {
+            if (e.target === chartsModal) closeChartsModal();
         });
-    });
+    }
+
+    // Eventos para hacer clic en las estadísticas de Tasa de Aprobación y Nota Promedio
+    const cardApproval = document.getElementById('card-stat-approval');
+    const cardAverage = document.getElementById('card-stat-average');
+
+    if (cardApproval) {
+        cardApproval.addEventListener('click', openChartsModal);
+    }
+    if (cardAverage) {
+        cardAverage.addEventListener('click', openChartsModal);
+    }
 
     // 12. Gestión de Filtros
     searchInput.addEventListener('input', (e) => {
@@ -498,11 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function applyAllFilters() {
-        if (currentTab === 'registro') {
-            renderCandidates();
-        } else if (currentTab === 'ojt') {
-            renderOjtCards();
-        }
+        renderCandidates();
     }
 
     // 13. Gráficos Interactivos (Chart.js)
