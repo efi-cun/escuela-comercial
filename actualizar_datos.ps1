@@ -67,8 +67,8 @@ try {
         }
     }
     
-    # 2. Exportar la pestaña "OJT"
-    $sheetOJT = $wb1.Sheets.Item("OJT")
+    # 2. Exportar la pestaña "OJT" (ahora OJT_APROBADOS)
+    $sheetOJT = $wb1.Sheets.Item("OJT_APROBADOS")
     $ojtData = @()
     if ($sheetOJT) {
         $headers = @()
@@ -100,26 +100,63 @@ try {
         }
     }
     
-    # 3. Exportar la pestaña "OJT 2" (Seguimiento diario de OJT)
-    $sheetOJT2 = $wb1.Sheets.Item("OJT 2")
+    # 3. Exportar la pestaña "OJT" (Seguimiento diario de OJT, anteriormente OJT 2)
+    $sheetOJT2 = $wb1.Sheets.Item("OJT")
     $ojt2Data = @()
     if ($sheetOJT2) {
         $headers = @()
+        # En la pestaña de seguimiento OJT las cabeceras están en la fila 4
         for ($col = 1; $col -le 40; $col++) {
-            $val = $sheetOJT2.Cells.Item(1, $col).Value2
+            $val = $sheetOJT2.Cells.Item(4, $col).Value2
             if ($val -eq $null -or $val -eq "") { break }
             $headers += $val
         }
         
-        for ($row = 2; $row -le 500; $row++) {
-            $docVal = $sheetOJT2.Cells.Item($row, 2).Value2
-            if ($docVal -eq $null -or $docVal -eq "") { break }
+        $currentDoc = ""
+        $currentName = ""
+        $currentCampana = ""
+        $currentFormador = ""
+        
+        # Los datos comienzan en la fila 5
+        for ($row = 5; $row -le 1000; $row++) {
+            $diaVal = $sheetOJT2.Cells.Item($row, 6).Value2
+            if ($diaVal -eq $null -or $diaVal -eq "") { break } # Fin de la plantilla
+            
+            $dia = [int]$diaVal
+            if ($dia -eq 1) {
+                # Es el inicio del bloque de 5 días de un candidato
+                $docVal = $sheetOJT2.Cells.Item($row, 2).Value2
+                if ($docVal -eq $null -or $docVal -eq "") {
+                    # No hay más candidatos aprobados asignados en esta plantilla
+                    break
+                }
+                $currentDoc = $docVal
+                $currentName = $sheetOJT2.Cells.Item($row, 3).Value2
+                $currentCampana = $sheetOJT2.Cells.Item($row, 4).Value2
+                $currentFormador = $sheetOJT2.Cells.Item($row, 5).Value2
+            }
+            
+            # Si no tenemos un candidato actual asignado en este bloque, saltamos
+            if ($currentDoc -eq "") { continue }
             
             $rowObj = [ordered]@{}
             for ($col = 1; $col -le $headers.Length; $col++) {
                 $h = $headers[$col-1]
-                $val = $sheetOJT2.Cells.Item($row, $col).Value2
-                if ($val -eq $null) { $val = "" }
+                $val = ""
+                
+                # Para días 2 a 5, completamos los campos del candidato con los del primer día
+                if ($h -eq "No. DOCUMENTO") {
+                    $val = $currentDoc
+                } elseif ($h -eq "NOMBRE COMPLETO") {
+                    $val = $currentName
+                } elseif ($h -eq "CAMPAÑA") {
+                    $val = $currentCampana
+                } elseif ($h -eq "FORMADOR") {
+                    $val = $currentFormador
+                } else {
+                    $val = $sheetOJT2.Cells.Item($row, $col).Value2
+                    if ($val -eq $null) { $val = "" }
+                }
                 
                 if ($h -like "*FECHA*") {
                     $val = ExcelDateToDateString $val
