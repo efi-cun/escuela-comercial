@@ -33,15 +33,24 @@ document.addEventListener('DOMContentLoaded', () => {
         observaciones: r["OBSERVACIONES"] ? String(r["OBSERVACIONES"]).trim() : ""
     }));
 
-    const ojt = rawOjt.map(o => ({
-        ...o,
-        nombre: o["NOMBRE COMPLETO"] ? String(o["NOMBRE COMPLETO"]).trim() : "",
-        documento: o["No. DOCUMENTO"] ? String(o["No. DOCUMENTO"]).trim() : "",
-        fechaIngreso: o["FECHA DE INGRESO A FORMACIÓN"] || "",
-        correo: o["CORREO ELECTRÓNICO"] || "",
-        telefono: o["TELÉFONO MÓVIL"] || "",
-        notaFinal: parseFloat(o["NOTA FINAL"]) || 0
-    }));
+    const ojt = rawOjt.map(o => {
+        const camp = o["CAMPAÑA"] || o["CAMPAÃ‘A"] || o["CAMPAÂ‘A"] || o.campana || "";
+        const docStr = o["No. DOCUMENTO"] !== undefined && o["No. DOCUMENTO"] !== null ? String(o["No. DOCUMENTO"]).trim() : (o.documento ? String(o.documento).trim() : "");
+        const fullRecord = registro.find(r => r.documento && docStr && r.documento === docStr);
+        const nameStr = o["NOMBRE COMPLETO"] ? String(o["NOMBRE COMPLETO"]).trim() : (fullRecord ? fullRecord.nombre : (o.nombre || ""));
+        const finalCamp = camp ? String(camp).trim() : (fullRecord ? fullRecord.campana : "Posgrados");
+        return {
+            ...o,
+            nombre: nameStr,
+            documento: docStr,
+            campana: finalCamp,
+            "CAMPAÑA": finalCamp,
+            fechaIngreso: o["FECHA DE INGRESO A FORMACIÓN"] || (fullRecord ? fullRecord.fechaIngreso : ""),
+            correo: o["CORREO ELECTRÓNICO"] || (fullRecord ? fullRecord.correo : ""),
+            telefono: o["TELÉFONO MÓVIL"] || (fullRecord ? fullRecord.telefono : ""),
+            notaFinal: parseFloat(o["NOTA FINAL"]) || (fullRecord ? fullRecord.notaFinal : 0)
+        };
+    });
 
     const ojtDiario = (rawOjtDiario || []).map(d => {
         let rawAdh = d["ADERECIA "] !== undefined ? d["ADERECIA "] : (d["ADERECIA"] !== undefined ? d["ADERECIA"] : (d["ADHERENCIA"] || d["ADHERENCIA "]));
@@ -347,9 +356,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Filtrar ojt
         const filteredOjt = ojt.filter(o => {
-            const matchesSearch = o.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                 o.documento.includes(searchQuery);
-            const matchesCampana = !filterCampana || o["CAMPAÑA"] === filterCampana;
+            const matchesSearch = !searchQuery || 
+                                 (o.nombre && o.nombre.toLowerCase().includes(searchQuery.toLowerCase())) || 
+                                 (o.documento && o.documento.includes(searchQuery));
+            const candidateCampana = o.campana || o["CAMPAÑA"] || "";
+            const matchesCampana = !filterCampana || candidateCampana === filterCampana;
             return matchesSearch && matchesCampana;
         });
 

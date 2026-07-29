@@ -33,7 +33,10 @@ try {
     Write-Output "Iniciando lectura de archivos Excel..."
     
     # Resolver la ruta de los archivos Excel en la carpeta actual
-    $file1 = Get-Item "BASE_ONBOARDING_ESCUELA_COMERCIAL (4).xlsx" -ErrorAction SilentlyContinue
+    $file1 = Get-Item "BASE_ONBOARDING_ESCUELA_COMERCIAL (4) (1).xlsx" -ErrorAction SilentlyContinue
+    if (-not $file1) {
+        $file1 = Get-Item "BASE_ONBOARDING_ESCUELA_COMERCIAL (4).xlsx" -ErrorAction SilentlyContinue
+    }
     if (-not $file1) {
         $file1 = Get-ChildItem "BASE_ONBOARDING*.xlsx" -ErrorAction SilentlyContinue | Select-Object -First 1
     }
@@ -153,6 +156,51 @@ try {
         }
     }
     
+    # Transfiere automáticamente los participantes aprobados de la hoja "Registro" a la lista OJT
+    foreach ($reg in $registroData) {
+        $regDoc = ""
+        $regNom = ""
+        $regCamp = ""
+        $regNota = ""
+        $apr = ""
+
+        foreach ($k in $reg.Keys) {
+            if ($k -like "*DOCUMENTO*") { $regDoc = "$($reg[$k])".Trim() }
+            elseif ($k -like "*NOMBRE*") { $regNom = "$($reg[$k])".Trim() }
+            elseif ($k -like "*CAMPA*") { $regCamp = "$($reg[$k])".Trim() }
+            elseif ($k -like "*NOTA*FINAL*") { $regNota = "$($reg[$k])".Trim() }
+            elseif ($k -eq "APRUEBA") { $apr = "$($reg[$k])".Trim() }
+        }
+        
+        $notaVal = 0
+        if ($regNota -ne "") { [double]::TryParse($regNota, [ref]$notaVal) | Out-Null }
+        
+        if ($apr -eq "Aprueba" -or $notaVal -ge 70) {
+            if ($regDoc -ne "" -or $regNom -ne "") {
+                $exists = $false
+                foreach ($o in $ojtData) {
+                    $oDoc = ""
+                    $oNom = ""
+                    foreach ($okey in $o.Keys) {
+                        if ($okey -like "*DOCUMENTO*") { $oDoc = "$($o[$okey])".Trim() }
+                        if ($okey -like "*NOMBRE*") { $oNom = "$($o[$okey])".Trim() }
+                    }
+                    if ($oDoc -ne "" -and $oDoc -eq $regDoc) { $exists = $true; break }
+                    if ($oNom -ne "" -and $oNom.ToLower() -eq $regNom.ToLower()) { $exists = $true; break }
+                }
+                if (-not $exists) {
+                    $ojtData += [ordered]@{
+                        "No. DOCUMENTO" = $regDoc
+                        "NOMBRE COMPLETO" = $regNom
+                        "CAMPAÑA" = $regCamp
+                        "NOTA FINAL" = $regNota
+                        "APRUEBA" = "Aprueba"
+                    }
+                }
+            }
+        }
+    }
+    
     $wb1.Close($false)
     if (Test-Path $tempPath1) { Remove-Item $tempPath1 -Force }
     
@@ -221,7 +269,13 @@ try {
     $datedHtmlName = "Dashboard_$dateStamp.html"
     $datedHtmlPath = Join-Path $PSScriptRoot $datedHtmlName
     $indexPath = Join-Path $PSScriptRoot "index.html"
+    if (Test-Path $datedHtmlPath) {
+        $item = Get-Item $datedHtmlPath -Force
+        $item.Attributes = [System.IO.FileAttributes]::Normal
+    }
     if (Test-Path $indexPath) {
+        $item = Get-Item $indexPath -Force
+        $item.Attributes = [System.IO.FileAttributes]::Normal
         $indexContent = Get-Content $indexPath -Raw -Encoding UTF8
         if ($indexContent -match "const ONBOARDING_DATA =") {
             $datedContent = $indexContent -replace 'const ONBOARDING_DATA = [\s\S]*?;\r?\n', "const ONBOARDING_DATA = $json;`n"
