@@ -223,8 +223,13 @@ try {
     $indexPath = Join-Path $PSScriptRoot "index.html"
     if (Test-Path $indexPath) {
         $indexContent = Get-Content $indexPath -Raw -Encoding UTF8
-        $datedContent = $indexContent -replace '<script src="data.js"></script>', "<script>`nconst ONBOARDING_DATA = $json;`n</script>"
+        if ($indexContent -match "const ONBOARDING_DATA =") {
+            $datedContent = $indexContent -replace 'const ONBOARDING_DATA = [\s\S]*?;\r?\n', "const ONBOARDING_DATA = $json;`n"
+        } else {
+            $datedContent = $indexContent -replace '<script src="data.js"></script>', "<script>`nconst ONBOARDING_DATA = $json;`n</script>"
+        }
         [System.IO.File]::WriteAllText($datedHtmlPath, $datedContent, [System.Text.Encoding]::UTF8)
+        [System.IO.File]::WriteAllText($indexPath, $datedContent, [System.Text.Encoding]::UTF8)
     }
     
     # Ocultar archivos técnicos para que la carpeta permanezca limpia
