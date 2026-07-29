@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -498,6 +498,16 @@ h1, h2, h3, h4, h5, h6 {
   text-overflow: ellipsis;
 }
 
+.candidate-doc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .card-body {
   border-top: 1px solid rgba(0, 0, 0, 0.04);
   padding-top: 1rem;
@@ -520,7 +530,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .card-footer {
-  margin-top: 1.2rem;
+  margin-top: 0.8rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -4519,20 +4529,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="candidate-meta">
                         <h3 class="candidate-name" title="${c.nombre}">${c.nombre}</h3>
                         <p class="candidate-role" title="${c.cargo}">${c.cargo}</p>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <span class="info-label">Campaña</span>
-                        <span class="info-value">${c.campana}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Cédula</span>
-                        <span class="info-value">${c.documento}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">F. Ingreso</span>
-                        <span class="info-value">${c.fechaIngreso || "N/A"}</span>
+                        <p class="candidate-doc">C.C. ${c.documento}</p>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -4613,20 +4610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="candidate-meta">
                         <h3 class="candidate-name" title="${o.nombre}">${o.nombre}</h3>
                         <p class="candidate-role" title="${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}">${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}</p>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <span class="info-label">Campaña</span>
-                        <span class="info-value">${o["CAMPAÑA"] || "Posgrados"}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Cédula</span>
-                        <span class="info-value">${o.documento}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">F. Ingreso</span>
-                        <span class="info-value">${o.fechaIngreso || "N/A"}</span>
+                        <p class="candidate-doc">C.C. ${o.documento}</p>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -5194,20 +5178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="candidate-meta">
                         <h3 class="candidate-name" title="${o.nombre}">${o.nombre}</h3>
                         <p class="candidate-role" title="${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}">${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}</p>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <span class="info-label">Campaña</span>
-                        <span class="info-value">${o["CAMPAÑA"] || "Posgrados"}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Cédula</span>
-                        <span class="info-value">${o.documento}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">F. Ingreso</span>
-                        <span class="info-value">${o.fechaIngreso || "N/A"}</span>
+                        <p class="candidate-doc">C.C. ${o.documento}</p>
                     </div>
                 </div>
                 <div class="card-footer">

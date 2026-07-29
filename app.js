@@ -312,20 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="candidate-meta">
                         <h3 class="candidate-name" title="${c.nombre}">${c.nombre}</h3>
                         <p class="candidate-role" title="${c.cargo}">${c.cargo}</p>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <span class="info-label">Campaña</span>
-                        <span class="info-value">${c.campana}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Cédula</span>
-                        <span class="info-value">${c.documento}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">F. Ingreso</span>
-                        <span class="info-value">${c.fechaIngreso || "N/A"}</span>
+                        <p class="candidate-doc">C.C. ${c.documento}</p>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -406,20 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="candidate-meta">
                         <h3 class="candidate-name" title="${o.nombre}">${o.nombre}</h3>
                         <p class="candidate-role" title="${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}">${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}</p>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <span class="info-label">Campaña</span>
-                        <span class="info-value">${o["CAMPAÑA"] || "Posgrados"}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Cédula</span>
-                        <span class="info-value">${o.documento}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">F. Ingreso</span>
-                        <span class="info-value">${o.fechaIngreso || "N/A"}</span>
+                        <p class="candidate-doc">C.C. ${o.documento}</p>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -987,20 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="candidate-meta">
                         <h3 class="candidate-name" title="${o.nombre}">${o.nombre}</h3>
                         <p class="candidate-role" title="${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}">${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}</p>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <span class="info-label">Campaña</span>
-                        <span class="info-value">${o["CAMPAÑA"] || "Posgrados"}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Cédula</span>
-                        <span class="info-value">${o.documento}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">F. Ingreso</span>
-                        <span class="info-value">${o.fechaIngreso || "N/A"}</span>
+                        <p class="candidate-doc">C.C. ${o.documento}</p>
                     </div>
                 </div>
                 <div class="card-footer">

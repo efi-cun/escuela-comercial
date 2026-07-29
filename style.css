@@ -490,6 +490,16 @@ h1, h2, h3, h4, h5, h6 {
   text-overflow: ellipsis;
 }
 
+.candidate-doc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .card-body {
   border-top: 1px solid rgba(0, 0, 0, 0.04);
   padding-top: 1rem;
@@ -512,7 +522,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .card-footer {
-  margin-top: 1.2rem;
+  margin-top: 0.8rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
