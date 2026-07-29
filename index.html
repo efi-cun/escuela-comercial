@@ -29,6 +29,12 @@
 
 
 
+        <!-- Pestañas de Navegación Principal -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="registro">📋 Registro de Formación</button>
+            <button class="tab-btn" data-tab="ojt">🎓 Aprobados OJT</button>
+        </nav>
+
         <!-- Tarjetas de Estadísticas Globales (Hero Stats) -->
         <section class="stats-grid">
             <div class="stat-card">
@@ -38,7 +44,7 @@
                 </div>
                 <div class="stat-icon icon-blue">👥</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="card-stat-approved" style="cursor: pointer;" title="Haga clic para ver participantes aprobados en OJT">
                 <div class="stat-info">
                     <span class="stat-label">Total Aprobados</span>
                     <span class="stat-value" id="stat-total-approved">—</span>
@@ -65,7 +71,7 @@
         <section class="filter-card">
             <div class="search-wrapper">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="search-input" class="search-input" placeholder="Buscar por nombre o cédula...">
+                <input type="text" id="search-input" class="search-input" placeholder="Buscar por nombre, cédula o fecha de ingreso...">
             </div>
             <div class="filter-selects">
                 <select id="select-campana" class="filter-select">
@@ -73,6 +79,9 @@
                 </select>
                 <select id="select-cargo" class="filter-select">
                     <option value="">Cargo: Todos</option>
+                </select>
+                <select id="select-fecha" class="filter-select">
+                    <option value="">F. Ingreso: Todas</option>
                 </select>
                 <select id="select-estado" class="filter-select">
                     <option value="">Estado: Todos</option>
@@ -83,9 +92,18 @@
             </div>
         </section>
 
-        <!-- Registro de Candidatos (Grid de Tarjetas) -->
-        <div id="candidate-grid" class="candidate-grid">
-            <!-- Las tarjetas de candidatos se renderizarán dinámicamente aquí -->
+        <!-- Contenido Pestaña 1: Registro de Formación -->
+        <div id="tab-registro" class="tab-content active">
+            <div id="candidate-grid" class="candidate-grid">
+                <!-- Las tarjetas de candidatos se renderizarán dinámicamente aquí -->
+            </div>
+        </div>
+
+        <!-- Contenido Pestaña 2: Aprobados OJT -->
+        <div id="tab-ojt" class="tab-content" style="display: none;">
+            <div id="ojt-grid" class="candidate-grid">
+                <!-- Las tarjetas de OJT se renderizarán dinámicamente aquí -->
+            </div>
         </div>
     </div>
 
@@ -189,6 +207,109 @@
                 <!-- Botón de Certificado / PDF (si aplica) -->
                 <div id="modal-doc-box" class="modal-section" style="display: none;">
                     <!-- Se inyecta botón de ver PDF dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Aprobados OJT (Emergente al dar clic en Total Aprobados) -->
+    <div id="ojt-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 960px; width: 95%;">
+            <button id="ojt-modal-close" class="modal-close" title="Cerrar OJT">&times;</button>
+            <div class="modal-header-banner" style="height: 70px; background: var(--primary-gradient); display: flex; align-items: center; justify-content: space-between; padding: 0 3.5rem 0 2rem;">
+                <h2 style="color: white; font-size: 1.25rem; margin: 0; font-family: 'Plus Jakarta Sans';">
+                    🎓 Participantes Aprobados · Pestaña OJT
+                </h2>
+                <span id="ojt-badge-count" style="background: rgba(255,255,255,0.25); color: white; padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
+                    0 Aprobados
+                </span>
+            </div>
+            
+            <div class="modal-body" style="padding: 1.5rem 2rem 2.5rem;">
+                <!-- Filtros internos del modal OJT -->
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                    <div class="search-wrapper" style="flex: 1; min-width: 240px;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="ojt-modal-search" class="search-input" placeholder="Buscar en OJT por nombre, cédula o fecha...">
+                    </div>
+                    <select id="ojt-modal-filter-campana" class="filter-select" style="min-width: 180px;">
+                        <option value="">Campaña: Todas</option>
+                    </select>
+                </div>
+
+                <!-- Grid de Tarjetas de Candidatos OJT -->
+                <div id="ojt-modal-grid" class="candidate-grid" style="margin-bottom: 0; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+                    <!-- Tarjetas de OJT renderizadas dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle OJT (Seguimiento Diario Días 1 al 5) -->
+    <div id="ojt-detail-modal-overlay" class="modal-overlay" style="z-index: 1080;">
+        <div class="modal-content" style="max-width: 820px; width: 95%;">
+            <button id="ojt-detail-modal-close" class="modal-close" title="Cerrar detalle">&times;</button>
+            <div class="modal-header-banner" style="height: 180px; background: var(--primary-gradient);"></div>
+            
+            <div class="modal-body" style="padding: 0 2rem 2.5rem;">
+                <div class="modal-profile" style="margin-top: -100px; margin-bottom: 1.5rem;">
+                    <div id="ojt-modal-detail-avatar-container"></div>
+                    <div class="modal-name-section">
+                        <h2 id="ojt-modal-detail-name" class="modal-name" style="color: var(--text-main); font-size: 1.4rem;">Nombre Candidato</h2>
+                        <span id="ojt-modal-detail-role" class="modal-role" style="color: var(--text-muted); font-weight: 600;">Cargo</span>
+                    </div>
+                </div>
+
+                <!-- Resumen de Datos de Aprobación OJT (4 Campos Requeridos) -->
+                <div class="grid-2col" style="margin-bottom: 1.8rem; background: var(--orange-lt); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+                    <div class="info-row">
+                        <span class="info-label">No. Documento:</span>
+                        <span class="info-value" id="ojt-modal-detail-doc" style="font-weight: 700;">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Campaña:</span>
+                        <span class="info-value" id="ojt-modal-detail-campana" style="font-weight: 700;">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Nota de Aprobación:</span>
+                        <span class="info-value" id="ojt-modal-detail-grade" style="font-weight: 800; color: var(--primary-color); font-size: 1.15rem;">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Estado:</span>
+                        <span class="info-value"><span class="card-badge badge-approved" style="position:static;">OJT Activo</span></span>
+                    </div>
+                </div>
+
+                <!-- Listado de Días del 1 al 5 con Fecha, Matrículas, Adherencia % (Barra) y Aprobación -->
+                <div class="modal-section">
+                    <div class="modal-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>📅 Seguimiento Diario OJT (Días 1 al 5)</span>
+                    </div>
+                    
+                    <div class="table-responsive" style="margin-bottom: 1rem; box-shadow: none; border-radius: var(--radius-sm);">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Día</th>
+                                    <th>Fecha</th>
+                                    <th>Matrículas</th>
+                                    <th style="min-width: 190px;">Adherencia (%)</th>
+                                    <th>¿Aprueba?</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ojt-modal-detail-days-table">
+                                <!-- Se renderizan los días 1 al 5 dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <div class="modal-section">
+                    <div class="modal-section-title">📝 Observaciones</div>
+                    <div id="ojt-modal-detail-obs-box" class="observations-box">
+                        Sin observaciones registradas en OJT.
+                    </div>
                 </div>
             </div>
         </div>

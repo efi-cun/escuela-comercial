@@ -43,6 +43,30 @@ document.addEventListener('DOMContentLoaded', () => {
         notaFinal: parseFloat(o["NOTA FINAL"]) || 0
     }));
 
+    const ojtDiario = (rawOjtDiario || []).map(d => {
+        let rawAdh = d["ADERECIA "] !== undefined ? d["ADERECIA "] : (d["ADERECIA"] !== undefined ? d["ADERECIA"] : (d["ADHERENCIA"] || d["ADHERENCIA "]));
+        let adhVal = 0;
+        if (typeof rawAdh === 'number') {
+            adhVal = rawAdh <= 1 && rawAdh > 0 ? Math.round(rawAdh * 100) : Math.round(rawAdh);
+        } else if (typeof rawAdh === 'string' && rawAdh.trim() !== '') {
+            const parsed = parseFloat(rawAdh.replace('%', '').trim());
+            if (!isNaN(parsed)) {
+                adhVal = parsed <= 1 && parsed > 0 ? Math.round(parsed * 100) : Math.round(parsed);
+            }
+        }
+
+        return {
+            documento: d["No. DOCUMENTO"] ? String(d["No. DOCUMENTO"]).trim() : "",
+            nombre: d["NOMBRE COMPLETO"] ? String(d["NOMBRE COMPLETO"]).trim() : "",
+            dia: parseInt(d["DÍA"]) || 0,
+            fecha: d["FECHA"] ? String(d["FECHA"]).trim() : "",
+            matriculas: d["MATRÍCULAS"] !== undefined && d["MATRÍCULAS"] !== "" ? String(d["MATRÍCULAS"]).trim() : "0",
+            adherencia: adhVal,
+            actitud: d["ACTITUD (1-5)"] !== undefined ? String(d["ACTITUD (1-5)"]).trim() : "",
+            observaciones: d["OBSERVACIONES"] ? String(d["OBSERVACIONES"]).trim() : ""
+        };
+    });
+
     // Mostrar fecha de actualización en el header
     if (actualizado) {
         document.getElementById('update-date').textContent = actualizado;
@@ -77,11 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchQuery = '';
     let filterCampana = '';
     let filterCargo = '';
+    let filterFecha = '';
     let filterEstado = '';
 
     const searchInput = document.getElementById('search-input');
     const selectCampana = document.getElementById('select-campana');
     const selectCargo = document.getElementById('select-cargo');
+    const selectFecha = document.getElementById('select-fecha');
     const selectEstado = document.getElementById('select-estado');
     const btnClearFilters = document.getElementById('btn-clear-filters');
     const cardGrid = document.getElementById('candidate-grid');
@@ -113,14 +139,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === lightboxOverlay) closeLightbox();
     });
 
+    // 4. Gestión de Pestañas Principales (Registro vs OJT)
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabRegistro = document.getElementById('tab-registro');
+    const tabOjt = document.getElementById('tab-ojt');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.getAttribute('data-tab');
+            currentTab = targetTab;
+
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (targetTab === 'registro') {
+                if (tabRegistro) tabRegistro.style.display = 'block';
+                if (tabOjt) tabOjt.style.display = 'none';
+                renderCandidates();
+            } else if (targetTab === 'ojt') {
+                if (tabRegistro) tabRegistro.style.display = 'none';
+                if (tabOjt) tabOjt.style.display = 'block';
+                renderOjtCards();
+            }
+        });
+    });
+
     // 5. Configurar Selects Dinámicos
     function populateFilters() {
         const campanas = [...new Set(registro.map(r => r.campana))].filter(Boolean);
         const cargos = [...new Set(registro.map(r => r.cargo))].filter(Boolean);
+        const fechas = [...new Set(registro.map(r => r.fechaIngreso))].filter(Boolean);
 
         // Limpiar excepto el primero
         selectCampana.innerHTML = '<option value="">Campaña: Todas</option>';
         selectCargo.innerHTML = '<option value="">Cargo: Todos</option>';
+        if (selectFecha) {
+            selectFecha.innerHTML = '<option value="">F. Ingreso: Todas</option>';
+        }
 
         campanas.sort().forEach(c => {
             const opt = document.createElement('option');
@@ -135,6 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
             opt.textContent = c;
             selectCargo.appendChild(opt);
         });
+
+        if (selectFecha) {
+            fechas.sort().forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                selectFecha.appendChild(opt);
+            });
+        }
     }
 
     // 6. Calcular y mostrar Estadísticas
@@ -185,14 +249,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function getFilteredCandidates() {
         return registro.filter(r => {
             const matchesSearch = r.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                 r.documento.includes(searchQuery);
+                                 r.documento.includes(searchQuery) ||
+                                 (r.fechaIngreso && r.fechaIngreso.toLowerCase().includes(searchQuery.toLowerCase()));
             const matchesCampana = !filterCampana || r.campana === filterCampana;
             const matchesCargo = !filterCargo || r.cargo === filterCargo;
+            const matchesFecha = !filterFecha || r.fechaIngreso === filterFecha;
             const matchesEstado = !filterEstado || 
                                   (filterEstado === 'aprobado' && r.aprobado) || 
                                   (filterEstado === 'no_aprobado' && !r.aprobado);
 
-            return matchesSearch && matchesCampana && matchesCargo && matchesEstado;
+            return matchesSearch && matchesCampana && matchesCargo && matchesFecha && matchesEstado;
         });
     }
 
@@ -368,16 +434,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // Si tenemos el registro completo, permitimos abrir el modal con el desglose
-            if (fullRecord) {
-                card.querySelector('.card-action-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openModal(fullRecord);
-                });
-                card.addEventListener('click', () => openModal(fullRecord));
-            } else {
-                card.querySelector('.card-action-btn').style.display = 'none';
-            }
+            // Al hacer clic en una tarjeta de OJT, abrir el modal de detalle diario de OJT
+            card.querySelector('.card-action-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                openOjtDetailModal(o);
+            });
+            card.addEventListener('click', () => openOjtDetailModal(o));
 
             // Si el avatar tiene foto, permitir hacer zoom al hacer click en él
             const avatarEl = card.querySelector('.avatar');
@@ -544,6 +606,13 @@ document.addEventListener('DOMContentLoaded', () => {
         applyAllFilters();
     });
 
+    if (selectFecha) {
+        selectFecha.addEventListener('change', (e) => {
+            filterFecha = e.target.value;
+            applyAllFilters();
+        });
+    }
+
     selectEstado.addEventListener('change', (e) => {
         filterEstado = e.target.value;
         applyAllFilters();
@@ -553,11 +622,13 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.value = '';
         selectCampana.value = '';
         selectCargo.value = '';
+        if (selectFecha) selectFecha.value = '';
         selectEstado.value = '';
         
         searchQuery = '';
         filterCampana = '';
         filterCargo = '';
+        filterFecha = '';
         filterEstado = '';
         
         applyAllFilters();
@@ -565,6 +636,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applyAllFilters() {
         renderCandidates();
+        if (ojtGrid) {
+            renderOjtCards();
+        }
     }
 
     // 13. Gráficos Interactivos (Chart.js)
@@ -716,19 +790,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: 'Aprobados',
                         data: aprobadosData,
                         backgroundColor: '#10b981',
-                        borderRadius: 4
+                        borderRadius: 6,
+                        borderWidth: 0,
+                        maxBarThickness: 38
                     },
                     {
                         label: 'No Aprobados',
                         data: noAprobadosData,
                         backgroundColor: '#ef4444',
-                        borderRadius: 4
+                        borderRadius: 6,
+                        borderWidth: 0,
+                        maxBarThickness: 38
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 1200,
+                    easing: 'easeOutQuart'
+                },
                 onHover: (event, chartElement) => {
                     event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
                 },
@@ -748,12 +830,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 scales: {
                     x: {
-                        stacked: true,
-                        ticks: { color: '#4b5e3a', font: { family: 'Inter', size: 10 } },
+                        stacked: false, // Dos barras independientes por campaña
+                        ticks: { color: '#4b5e3a', font: { family: 'Inter', size: 10, weight: '600' } },
                         grid: { display: false }
                     },
                     y: {
-                        stacked: true,
+                        stacked: false, // Dos barras independientes por campaña
                         ticks: { color: '#4b5e3a', stepSize: 1, font: { family: 'Inter', size: 10 } },
                         grid: { color: 'rgba(43, 147, 72, 0.05)' }
                     }
@@ -780,6 +862,280 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+        });
+    }
+
+    // 13.5 Modal Aprobados OJT (Emergente al hacer clic en Total Aprobados)
+    const ojtModal = document.getElementById('ojt-modal-overlay');
+    const ojtModalClose = document.getElementById('ojt-modal-close');
+    const cardStatApproved = document.getElementById('card-stat-approved');
+    const ojtModalGrid = document.getElementById('ojt-modal-grid');
+    const ojtModalSearch = document.getElementById('ojt-modal-search');
+    const ojtModalFilterCampana = document.getElementById('ojt-modal-filter-campana');
+    const ojtBadgeCount = document.getElementById('ojt-badge-count');
+
+    let ojtSearchQuery = '';
+    let ojtFilterCampana = '';
+
+    function openOjtModal() {
+        if (!ojtModal) return;
+        
+        if (ojtModalFilterCampana) {
+            const ojtCampanas = [...new Set(ojt.map(o => o["CAMPAÑA"] || "Posgrados"))].filter(Boolean);
+            ojtModalFilterCampana.innerHTML = '<option value="">Campaña: Todas</option>';
+            ojtCampanas.sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                ojtModalFilterCampana.appendChild(opt);
+            });
+        }
+        
+        ojtSearchQuery = '';
+        ojtFilterCampana = '';
+        if (ojtModalSearch) ojtModalSearch.value = '';
+        if (ojtModalFilterCampana) ojtModalFilterCampana.value = '';
+
+        renderOjtModalCards();
+        ojtModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeOjtModal() {
+        if (!ojtModal) return;
+        ojtModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    if (cardStatApproved) {
+        cardStatApproved.addEventListener('click', openOjtModal);
+    }
+    if (ojtModalClose) {
+        ojtModalClose.addEventListener('click', closeOjtModal);
+    }
+    if (ojtModal) {
+        ojtModal.addEventListener('click', (e) => {
+            if (e.target === ojtModal) closeOjtModal();
+        });
+    }
+    if (ojtModalSearch) {
+        ojtModalSearch.addEventListener('input', (e) => {
+            ojtSearchQuery = e.target.value;
+            renderOjtModalCards();
+        });
+    }
+    if (ojtModalFilterCampana) {
+        ojtModalFilterCampana.addEventListener('change', (e) => {
+            ojtFilterCampana = e.target.value;
+            renderOjtModalCards();
+        });
+    }
+
+    function renderOjtModalCards() {
+        if (!ojtModalGrid) return;
+        
+        const filteredOjt = ojt.filter(o => {
+            const matchesSearch = o.nombre.toLowerCase().includes(ojtSearchQuery.toLowerCase()) || 
+                                 o.documento.includes(ojtSearchQuery) ||
+                                 (o.fechaIngreso && o.fechaIngreso.toLowerCase().includes(ojtSearchQuery.toLowerCase()));
+            const camp = o["CAMPAÑA"] || "Posgrados";
+            const matchesCampana = !ojtFilterCampana || camp === ojtFilterCampana;
+            return matchesSearch && matchesCampana;
+        });
+
+        if (ojtBadgeCount) {
+            ojtBadgeCount.textContent = `${filteredOjt.length} Aprobados OJT`;
+        }
+
+        ojtModalGrid.innerHTML = '';
+
+        if (filteredOjt.length === 0) {
+            ojtModalGrid.innerHTML = '<div class="no-data-msg" style="grid-column: 1/-1;">No se encontraron participantes en OJT con los filtros aplicados.</div>';
+            return;
+        }
+
+        filteredOjt.forEach(o => {
+            const card = document.createElement('div');
+            card.className = 'candidate-card';
+            
+            const photoInfo = getPhotoInfo(o.nombre);
+            let avatarHtml = '';
+            
+            if (photoInfo && !photoInfo.isPdf) {
+                avatarHtml = `<div class="avatar" style="background-image: url('${photoInfo.file}')"></div>`;
+            } else if (photoInfo && photoInfo.isPdf) {
+                const initials = getInitials(o.nombre);
+                const bg = getAvatarStyle(o.nombre);
+                avatarHtml = `
+                    <div class="avatar-placeholder" style="background: ${bg}">${initials}</div>
+                    <div class="pdf-icon-indicator" title="Ver Documento PDF">PDF</div>
+                `;
+            } else {
+                const initials = getInitials(o.nombre);
+                const bg = getAvatarStyle(o.nombre);
+                avatarHtml = `<div class="avatar-placeholder" style="background: ${bg}">${initials}</div>`;
+            }
+
+            const fullRecord = registro.find(r => r.documento === o.documento);
+
+            card.innerHTML = `
+                <span class="card-badge badge-approved">OJT Activo</span>
+                <div class="card-header">
+                    <div class="avatar-wrapper">
+                        ${avatarHtml}
+                    </div>
+                    <div class="candidate-meta">
+                        <h3 class="candidate-name" title="${o.nombre}">${o.nombre}</h3>
+                        <p class="candidate-role" title="${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}">${fullRecord ? fullRecord.cargo : o["CARGO"] || 'Sin Cargo'}</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="info-label">Campaña</span>
+                        <span class="info-value">${o["CAMPAÑA"] || "Posgrados"}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Cédula</span>
+                        <span class="info-value">${o.documento}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">F. Ingreso</span>
+                        <span class="info-value">${o.fechaIngreso || "N/A"}</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="grade-container">
+                        <span class="grade-label">Nota Aprobación</span>
+                        <span class="grade-val">${o.notaFinal}%</span>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        ${photoInfo && photoInfo.isPdf ? `<a href="${photoInfo.file}" target="_blank" class="pdf-btn" style="padding:0.4rem 0.6rem; font-size:0.7rem;">PDF</a>` : ''}
+                        <button class="card-action-btn">Ver Detalles</button>
+                    </div>
+                </div>
+            `;
+
+            card.querySelector('.card-action-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                openOjtDetailModal(o);
+            });
+            card.addEventListener('click', () => openOjtDetailModal(o));
+
+            const avatarEl = card.querySelector('.avatar');
+            if (avatarEl && photoInfo && !photoInfo.isPdf) {
+                avatarEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openLightbox(photoInfo.file);
+                });
+            }
+
+            ojtModalGrid.appendChild(card);
+        });
+    }
+
+    // 13.6 Modal Detalle Diario OJT (Seguimiento Días 1 al 5)
+    const ojtDetailModal = document.getElementById('ojt-detail-modal-overlay');
+    const ojtDetailModalClose = document.getElementById('ojt-detail-modal-close');
+
+    function openOjtDetailModal(candidate) {
+        if (!ojtDetailModal) return;
+
+        const photoInfo = getPhotoInfo(candidate.nombre);
+        const container = document.getElementById('ojt-modal-detail-avatar-container');
+        if (photoInfo && !photoInfo.isPdf) {
+            container.innerHTML = `<div class="modal-avatar" style="background-image: url('${photoInfo.file}')"></div>`;
+        } else {
+            const initials = getInitials(candidate.nombre);
+            const bg = getAvatarStyle(candidate.nombre);
+            container.innerHTML = `<div class="modal-avatar-placeholder" style="background:${bg}">${initials}</div>`;
+        }
+
+        const fullRecord = registro.find(r => r.documento === candidate.documento);
+
+        document.getElementById('ojt-modal-detail-name').textContent = candidate.nombre;
+        document.getElementById('ojt-modal-detail-role').textContent = fullRecord ? fullRecord.cargo : (candidate["CARGO"] || 'Sin Cargo');
+        document.getElementById('ojt-modal-detail-doc').textContent = candidate.documento;
+        document.getElementById('ojt-modal-detail-campana').textContent = candidate["CAMPAÑA"] || candidate.campana || 'Posgrados';
+        document.getElementById('ojt-modal-detail-grade').textContent = `${candidate.notaFinal}%`;
+
+        // Buscar registros de seguimiento diario para los Días 1 al 5
+        const dailyRecords = ojtDiario.filter(d => 
+            (candidate.documento && d.documento === candidate.documento) || 
+            (candidate.nombre && d.nombre && normalizeName(d.nombre) === normalizeName(candidate.nombre))
+        );
+
+        const tbody = document.getElementById('ojt-modal-detail-days-table');
+        tbody.innerHTML = '';
+
+        const dayObsList = [];
+
+        for (let dayNum = 1; dayNum <= 5; dayNum++) {
+            const dayRecord = dailyRecords.find(d => d.dia === dayNum) || {
+                dia: dayNum,
+                fecha: candidate.fechaIngreso || 'N/A',
+                matriculas: '0',
+                adherencia: 0,
+                observaciones: ''
+            };
+
+            if (dayRecord.observaciones) {
+                dayObsList.push(`<strong>Día ${dayNum}:</strong> ${dayRecord.observaciones}`);
+            }
+
+            const adherenceVal = dayRecord.adherencia;
+            const matCount = parseInt(dayRecord.matriculas) || 0;
+            const isApproved = (adherenceVal >= 70) || (matCount > 0) || (candidate.notaFinal >= 70);
+            const statusBadge = isApproved 
+                ? `<span class="score-status-badge badge-approved">Aprueba</span>` 
+                : `<span class="score-status-badge badge-failed">No aprueba</span>`;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong style="color: var(--primary-color);">Día ${dayNum}</strong></td>
+                <td>${dayRecord.fecha || 'N/A'}</td>
+                <td><span style="font-weight:700;">${dayRecord.matriculas}</span></td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <div class="score-bar-container" style="flex: 1; height: 9px; min-width: 80px; background: rgba(0,0,0,0.07);">
+                            <div class="score-bar-fill ${adherenceVal < 70 ? 'failed' : ''}" style="width: ${adherenceVal}%;"></div>
+                        </div>
+                        <span style="font-weight: 700; font-size: 0.85rem; min-width: 38px; text-align: right;">${adherenceVal}%</span>
+                    </div>
+                </td>
+                <td>${statusBadge}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        const obsBox = document.getElementById('ojt-modal-detail-obs-box');
+        const generalObs = candidate["OBSERVACIONES"] || candidate.observaciones;
+        if (dayObsList.length > 0 || generalObs) {
+            const combined = [];
+            if (generalObs) combined.push(`<strong>Observación General:</strong> ${generalObs}`);
+            combined.push(...dayObsList);
+            obsBox.innerHTML = combined.join('<br style="margin-bottom:0.4rem;">');
+            obsBox.className = 'observations-box';
+        } else {
+            obsBox.textContent = 'Sin observaciones registradas en OJT.';
+            obsBox.className = 'observations-box empty';
+        }
+
+        ojtDetailModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeOjtDetailModal() {
+        if (!ojtDetailModal) return;
+        ojtDetailModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    if (ojtDetailModalClose) {
+        ojtDetailModalClose.addEventListener('click', closeOjtDetailModal);
+    }
+    if (ojtDetailModal) {
+        ojtDetailModal.addEventListener('click', (e) => {
+            if (e.target === ojtDetailModal) closeOjtDetailModal();
         });
     }
 

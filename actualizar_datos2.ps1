@@ -42,7 +42,7 @@ try {
     }
     
     Write-Output "Archivo seleccionado: $($file2.Name)"
-    $tempPath2 = "C:\Users\yeison_oyolat\.gemini\antigravity-cli\brain\a1d668f2-5a2e-45c7-8fa4-848e96332c55\scratch\base2_copia.xlsx"
+    $tempPath2 = [System.IO.Path]::Combine($env:TEMP, "temp_base2_copia_$([guid]::NewGuid().ToString('N')).xlsx")
     Copy-Item $file2.FullName $tempPath2 -Force
     
     $wb2 = $excel.Workbooks.Open($tempPath2)
@@ -194,8 +194,33 @@ try {
     $json = ConvertTo-Json $output -Depth 10
     
     # Generar data2.js en el directorio actual
+    $targetDataFile2 = Join-Path $PSScriptRoot "data2.js"
+    if (Test-Path $targetDataFile2) {
+        $item = Get-Item $targetDataFile2 -Force
+        $item.Attributes = [System.IO.FileAttributes]::Normal
+    }
     $jsContent = "const ONBOARDING_DATA = " + $json + ";"
-    $jsContent | Out-File -FilePath "data2.js" -Encoding utf8
+    [System.IO.File]::WriteAllText($targetDataFile2, $jsContent, [System.Text.Encoding]::UTF8)
+    
+    # Crear un archivo HTML historico con la fecha de la actualización para Dashboard 2
+    $dateStamp = Get-Date -Format "yyyy-MM-dd"
+    $datedHtmlName2 = "Dashboard2_$dateStamp.html"
+    $datedHtmlPath2 = Join-Path $PSScriptRoot $datedHtmlName2
+    $index2Path = Join-Path $PSScriptRoot "index2.html"
+    if (Test-Path $index2Path) {
+        $index2Content = Get-Content $index2Path -Raw -Encoding UTF8
+        $datedContent2 = $index2Content -replace '<script src="data2.js"></script>', "<script>`nconst ONBOARDING_DATA = $json;`n</script>"
+        [System.IO.File]::WriteAllText($datedHtmlPath2, $datedContent2, [System.Text.Encoding]::UTF8)
+    }
+    
+    # Ocultar archivos técnicos para que la carpeta permanezca limpia
+    $filesToHide = @("app.js", "style.css", "data.js", "data2.js", "actualizar_datos.ps1", "actualizar_datos2.ps1")
+    foreach ($f in $filesToHide) {
+        if (Test-Path $f) {
+            $item = Get-Item $f -Force
+            $item.Attributes = $item.Attributes -bor [System.IO.FileAttributes]::Hidden
+        }
+    }
     
     Write-Output "========================================================="
     Write-Output "¡DATOS DE LA COPIA 2 ACTUALIZADOS CON ÉXITO!"

@@ -613,7 +613,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .modal-header-banner {
   background: var(--primary-gradient);
-  height: 140px;
+  height: 180px; /* Extendido para cubrir holgadamente por debajo del cargo */
   border-top-left-radius: calc(var(--radius-lg) - 1px);
   border-top-right-radius: calc(var(--radius-lg) - 1px);
 }
@@ -627,7 +627,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: flex-end;
   gap: 1.5rem;
-  margin-top: -65px;
+  margin-top: -100px;
   margin-bottom: 2rem;
 }
 
@@ -657,20 +657,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .modal-name-section {
-  padding-bottom: 1.5rem;
+  padding-bottom: 0.8rem;
 }
 
 .modal-name {
-  font-size: 1.3rem;
+  font-size: 1.35rem;
   font-weight: 800;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  color: white !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 
 .modal-role {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.95) !important;
   font-weight: 500;
+  display: block;
+  margin-top: 0.2rem;
 }
 
 /* Modal sections */

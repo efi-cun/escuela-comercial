@@ -17,26 +17,44 @@ function ExcelDateToDateString($excelDate) {
     return $excelDate
 }
 
+function Get-SheetSafely($workbook, $name) {
+    try {
+        foreach ($sh in $workbook.Sheets) {
+            if ($sh.Name -eq $name) { return $sh }
+        }
+        foreach ($sh in $workbook.Sheets) {
+            if ($sh.Name -like "*$name*") { return $sh }
+        }
+    } catch {}
+    return $null
+}
+
 try {
     Write-Output "Iniciando lectura de archivos Excel..."
     
     # Resolver la ruta de los archivos Excel en la carpeta actual
     $file1 = Get-Item "BASE_ONBOARDING_ESCUELA_COMERCIAL (4).xlsx" -ErrorAction SilentlyContinue
     if (-not $file1) {
+        $file1 = Get-ChildItem "BASE_ONBOARDING*.xlsx" -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+    if (-not $file1) {
+        $file1 = Get-ChildItem "*.xlsx" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike "*OJT*" -and $_.Name -notlike "*2*" } | Select-Object -First 1
+    }
+    if (-not $file1) {
         Write-Output "---------------------------------------------------------"
-        Write-Output "ERROR: No se encontro el archivo original:"
-        Write-Output "  'BASE_ONBOARDING_ESCUELA_COMERCIAL (4).xlsx'"
+        Write-Output "ERROR: No se encontro el archivo original de Excel."
         Write-Output "Por favor colocalo en esta carpeta y vuelve a intentarlo."
         Write-Output "---------------------------------------------------------"
         return
     }
-    $tempPath1 = "C:\Users\yeison_oyolat\.gemini\antigravity-cli\brain\a1d668f2-5a2e-45c7-8fa4-848e96332c55\scratch\base1.xlsx"
+    $tempPath1 = [System.IO.Path]::Combine($env:TEMP, "temp_base1_$([guid]::NewGuid().ToString('N')).xlsx")
     Copy-Item $file1.FullName $tempPath1 -Force
     
     $wb1 = $excel.Workbooks.Open($tempPath1)
     
     # 1. Exportar la pestaña "Registro"
-    $sheetReg = $wb1.Sheets.Item("Registro")
+    $sheetReg = Get-SheetSafely $wb1 "Registro"
+    if (-not $sheetReg) { $sheetReg = $wb1.Sheets.Item(1) }
     $registroData = @()
     if ($sheetReg) {
         $headers = @()
@@ -67,103 +85,71 @@ try {
         }
     }
     
-    # 2. Exportar la pestaña "OJT" (ahora OJT_APROBADOS)
-    $sheetOJT = $wb1.Sheets.Item("OJT_APROBADOS")
+    # 2. Exportar la pestaña "OJT" (Candidatos Aprobados OJT y Seguimiento Diario)
+    $sheetOJT = Get-SheetSafely $wb1 "OJT"
     $ojtData = @()
+    $ojt2Data = @()
+
     if ($sheetOJT) {
         $headers = @()
         for ($col = 1; $col -le 40; $col++) {
             $val = $sheetOJT.Cells.Item(1, $col).Value2
             if ($val -eq $null -or $val -eq "") { break }
-            $headers += $val
+            $headers += "$val".Trim()
         }
         
-        for ($row = 2; $row -le 200; $row++) {
-            $docVal = $sheetOJT.Cells.Item($row, 1).Value2
-            if ($docVal -eq $null -or $docVal -eq "") {
-                $nameVal = $sheetOJT.Cells.Item($row, 2).Value2
-                if ($nameVal -eq $null -or $nameVal -eq "") { break }
+        $currDoc = ""
+        $currName = ""
+        $currCampana = ""
+        $currGrade = ""
+
+        for ($row = 2; $row -le 1000; $row++) {
+            $diaVal = $sheetOJT.Cells.Item($row, 6).Value2
+            $docVal = $sheetOJT.Cells.Item($row, 2).Value2
+
+            if (($diaVal -eq $null -or "$diaVal".Trim() -eq "") -and ($docVal -eq $null -or "$docVal".Trim() -eq "")) {
+                break
             }
-            
-            $rowObj = [ordered]@{}
-            for ($col = 1; $col -le $headers.Length; $col++) {
-                $h = $headers[$col-1]
-                $val = $sheetOJT.Cells.Item($row, $col).Value2
-                if ($val -eq $null) { $val = "" }
-                
-                if ($h -like "*FECHA*") {
-                    $val = ExcelDateToDateString $val
+
+            $nameVal = $sheetOJT.Cells.Item($row, 3).Value2
+            $campVal = $sheetOJT.Cells.Item($row, 4).Value2
+            $gradeVal = $sheetOJT.Cells.Item($row, 5).Value2
+
+            if ($docVal -ne $null -and "$docVal".Trim() -ne "") {
+                $currDoc = "$docVal".Trim()
+                $currName = "$nameVal".Trim()
+                $currCampana = "$campVal".Trim()
+                $currGrade = "$gradeVal".Trim()
+
+                $ojtData += [ordered]@{
+                    "No. DOCUMENTO" = $currDoc
+                    "NOMBRE COMPLETO" = $currName
+                    "CAMPAÑA" = $currCampana
+                    "NOTA FINAL" = $currGrade
+                    "APRUEBA" = "Aprueba"
                 }
-                $rowObj[$h] = $val
             }
-            $ojtData += $rowObj
-        }
-    }
-    
-    # 3. Exportar la pestaña "OJT" (Seguimiento diario de OJT, anteriormente OJT 2)
-    $sheetOJT2 = $wb1.Sheets.Item("OJT")
-    $ojt2Data = @()
-    if ($sheetOJT2) {
-        $headers = @()
-        # En la pestaña de seguimiento OJT las cabeceras están en la fila 4
-        for ($col = 1; $col -le 40; $col++) {
-            $val = $sheetOJT2.Cells.Item(4, $col).Value2
-            if ($val -eq $null -or $val -eq "") { break }
-            $headers += $val
-        }
-        
-        $currentDoc = ""
-        $currentName = ""
-        $currentCampana = ""
-        $currentFormador = ""
-        
-        # Los datos comienzan en la fila 5
-        for ($row = 5; $row -le 1000; $row++) {
-            $diaVal = $sheetOJT2.Cells.Item($row, 6).Value2
-            if ($diaVal -eq $null -or $diaVal -eq "") { break } # Fin de la plantilla
-            
-            $dia = [int]$diaVal
-            if ($dia -eq 1) {
-                # Es el inicio del bloque de 5 días de un candidato
-                $docVal = $sheetOJT2.Cells.Item($row, 2).Value2
-                if ($docVal -eq $null -or $docVal -eq "") {
-                    # No hay más candidatos aprobados asignados en esta plantilla
-                    break
+
+            if ($currDoc -ne "") {
+                $rowObj = [ordered]@{}
+                for ($col = 1; $col -le $headers.Length; $col++) {
+                    $h = $headers[$col-1]
+                    $val = ""
+                    if ($h -eq "No. DOCUMENTO") { $val = $currDoc }
+                    elseif ($h -eq "NOMBRE COMPLETO") { $val = $currName }
+                    elseif ($h -eq "CAMPAÑA") { $val = $currCampana }
+                    elseif ($h -like "*NOTA*") { $val = $currGrade }
+                    else {
+                        $val = $sheetOJT.Cells.Item($row, $col).Value2
+                        if ($val -eq $null) { $val = "" }
+                    }
+                    if ($h -like "*FECHA*") {
+                        $val = ExcelDateToDateString $val
+                    }
+                    $rowObj[$h] = $val
                 }
-                $currentDoc = $docVal
-                $currentName = $sheetOJT2.Cells.Item($row, 3).Value2
-                $currentCampana = $sheetOJT2.Cells.Item($row, 4).Value2
-                $currentFormador = $sheetOJT2.Cells.Item($row, 5).Value2
+                $ojt2Data += $rowObj
             }
-            
-            # Si no tenemos un candidato actual asignado en este bloque, saltamos
-            if ($currentDoc -eq "") { continue }
-            
-            $rowObj = [ordered]@{}
-            for ($col = 1; $col -le $headers.Length; $col++) {
-                $h = $headers[$col-1]
-                $val = ""
-                
-                # Para días 2 a 5, completamos los campos del candidato con los del primer día
-                if ($h -eq "No. DOCUMENTO") {
-                    $val = $currentDoc
-                } elseif ($h -eq "NOMBRE COMPLETO") {
-                    $val = $currentName
-                } elseif ($h -eq "CAMPAÑA") {
-                    $val = $currentCampana
-                } elseif ($h -eq "FORMADOR") {
-                    $val = $currentFormador
-                } else {
-                    $val = $sheetOJT2.Cells.Item($row, $col).Value2
-                    if ($val -eq $null) { $val = "" }
-                }
-                
-                if ($h -like "*FECHA*") {
-                    $val = ExcelDateToDateString $val
-                }
-                $rowObj[$h] = $val
-            }
-            $ojt2Data += $rowObj
         }
     }
     
@@ -174,7 +160,7 @@ try {
     $file2 = Get-Item "BASE_ONBOARDING_ESCUELA_COMERCIAL_OJT_APROBADOS.xlsx" -ErrorAction SilentlyContinue
     $ojtAprobadosData = @()
     if ($file2) {
-        $tempPath2 = "C:\Users\yeison_oyolat\.gemini\antigravity-cli\brain\a1d668f2-5a2e-45c7-8fa4-848e96332c55\scratch\base2.xlsx"
+        $tempPath2 = [System.IO.Path]::Combine($env:TEMP, "temp_base2_$([guid]::NewGuid().ToString('N')).xlsx")
         Copy-Item $file2.FullName $tempPath2 -Force
         $wb2 = $excel.Workbooks.Open($tempPath2)
         
@@ -222,14 +208,42 @@ try {
     $json = ConvertTo-Json $output -Depth 10
     
     # Generar data.js en el directorio actual
+    $targetDataFile = Join-Path $PSScriptRoot "data.js"
+    if (Test-Path $targetDataFile) {
+        $item = Get-Item $targetDataFile -Force
+        $item.Attributes = [System.IO.FileAttributes]::Normal
+    }
     $jsContent = "const ONBOARDING_DATA = " + $json + ";"
-    $jsContent | Out-File -FilePath "data.js" -Encoding utf8
+    [System.IO.File]::WriteAllText($targetDataFile, $jsContent, [System.Text.Encoding]::UTF8)
+    
+    # Crear un archivo HTML historico con la fecha de la actualización
+    $dateStamp = Get-Date -Format "yyyy-MM-dd"
+    $datedHtmlName = "Dashboard_$dateStamp.html"
+    $datedHtmlPath = Join-Path $PSScriptRoot $datedHtmlName
+    $indexPath = Join-Path $PSScriptRoot "index.html"
+    if (Test-Path $indexPath) {
+        $indexContent = Get-Content $indexPath -Raw -Encoding UTF8
+        $datedContent = $indexContent -replace '<script src="data.js"></script>', "<script>`nconst ONBOARDING_DATA = $json;`n</script>"
+        [System.IO.File]::WriteAllText($datedHtmlPath, $datedContent, [System.Text.Encoding]::UTF8)
+    }
+    
+    # Ocultar archivos técnicos para que la carpeta permanezca limpia
+    $filesToHide = @("app.js", "style.css", "data.js", "data2.js", "actualizar_datos.ps1", "actualizar_datos2.ps1")
+    foreach ($f in $filesToHide) {
+        if (Test-Path $f) {
+            $item = Get-Item $f -Force
+            $item.Attributes = $item.Attributes -bor [System.IO.FileAttributes]::Hidden
+        }
+    }
     
     Write-Output "========================================================="
     Write-Output "¡DATOS ACTUALIZADOS CON ÉXITO!"
-    Write-Output "Se ha guardado el archivo 'data.js' con:"
+    Write-Output "Se ha guardado el archivo 'data.js' y '$datedHtmlName' con:"
     Write-Output " - Registro (Participantes): $($registroData.Count) registros"
     Write-Output " - OJT (Aprobados): $($ojtData.Count) registros"
+    Write-Output " - OJT Diario (Seguimiento): $($ojt2Data.Count) registros"
+    Write-Output " - OJT Aprobados (Extra): $($ojtAprobadosData.Count) registros"
+    Write-Output "========================================================="
     Write-Output " - OJT Diario (Seguimiento): $($ojt2Data.Count) registros"
     Write-Output " - OJT Aprobados (Extra): $($ojtAprobadosData.Count) registros"
     Write-Output "========================================================="
