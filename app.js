@@ -39,13 +39,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullRecord = registro.find(r => r.documento && docStr && r.documento === docStr);
         const nameStr = o["NOMBRE COMPLETO"] ? String(o["NOMBRE COMPLETO"]).trim() : (fullRecord ? fullRecord.nombre : (o.nombre || ""));
         const finalCamp = camp ? String(camp).trim() : (fullRecord ? fullRecord.campana : "Posgrados");
+        const cargoStr = o["CARGO"] ? String(o["CARGO"]).trim() : (fullRecord ? fullRecord.cargo : "Sin Cargo");
+        const fechaIngresoStr = o["FECHA DE INGRESO A FORMACIÓN"] ? String(o["FECHA DE INGRESO A FORMACIÓN"]).trim() : (fullRecord ? fullRecord.fechaIngreso : "");
+        const apruebaStr = o["APRUEBA"] !== undefined ? String(o["APRUEBA"]) : (fullRecord ? (fullRecord.aprobado ? 'Aprueba' : 'No aprueba') : 'Aprueba');
+        const isApproved = String(apruebaStr).toLowerCase().includes('aprueba') && !String(apruebaStr).toLowerCase().includes('no');
         return {
             ...o,
             nombre: nameStr,
             documento: docStr,
             campana: finalCamp,
+            cargo: cargoStr,
+            fechaIngreso: fechaIngresoStr,
+            aprobado: isApproved,
             "CAMPAÑA": finalCamp,
-            fechaIngreso: o["FECHA DE INGRESO A FORMACIÓN"] || (fullRecord ? fullRecord.fechaIngreso : ""),
             correo: o["CORREO ELECTRÓNICO"] || (fullRecord ? fullRecord.correo : ""),
             telefono: o["TELÉFONO MÓVIL"] || (fullRecord ? fullRecord.telefono : ""),
             notaFinal: parseFloat(o["NOTA FINAL"]) || (fullRecord ? fullRecord.notaFinal : 0)
@@ -105,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return photoMap[norm] || null;
     }
 
-    // 3. Variables de estado de filtrado
+    // 3. Variables de estado de filtrado (Pestaña Registro)
     let currentTab = 'registro';
     let searchQuery = '';
     let filterCampana = '';
@@ -120,6 +126,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectEstado = document.getElementById('select-estado');
     const btnClearFilters = document.getElementById('btn-clear-filters');
     const cardGrid = document.getElementById('candidate-grid');
+
+    // Variables de estado de filtrado (Pestaña OJT - Independiente)
+    let ojtTabSearchQuery = '';
+    let ojtTabFilterCampana = '';
+    let ojtTabFilterCargo = '';
+    let ojtTabFilterFecha = '';
+    let ojtTabFilterEstado = '';
+
+    const ojtTabSearchInput = document.getElementById('ojt-tab-search');
+    const ojtTabSelectCampana = document.getElementById('ojt-tab-select-campana');
+    const ojtTabSelectCargo = document.getElementById('ojt-tab-select-cargo');
+    const ojtTabSelectFecha = document.getElementById('ojt-tab-select-fecha');
+    const ojtTabSelectEstado = document.getElementById('ojt-tab-select-estado');
+    const ojtTabBtnClearFilters = document.getElementById('ojt-tab-btn-clear-filters');
     const ojtGrid = document.getElementById('ojt-grid');
     
     // Modal DOM
@@ -175,37 +195,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 5. Configurar Selects Dinámicos
     function populateFilters() {
+        // 1. Filtros Pestaña Registro
         const campanas = [...new Set(registro.map(r => r.campana))].filter(Boolean);
         const cargos = [...new Set(registro.map(r => r.cargo))].filter(Boolean);
         const fechas = [...new Set(registro.map(r => r.fechaIngreso))].filter(Boolean);
 
-        // Limpiar excepto el primero
-        selectCampana.innerHTML = '<option value="">Campaña: Todas</option>';
-        selectCargo.innerHTML = '<option value="">Cargo: Todos</option>';
-        if (selectFecha) {
-            selectFecha.innerHTML = '<option value="">F. Ingreso: Todas</option>';
+        if (selectCampana) {
+            selectCampana.innerHTML = '<option value="">Campaña: Todas</option>';
+            campanas.sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                selectCampana.appendChild(opt);
+            });
         }
 
-        campanas.sort().forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = c;
-            selectCampana.appendChild(opt);
-        });
-
-        cargos.sort().forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = c;
-            selectCargo.appendChild(opt);
-        });
+        if (selectCargo) {
+            selectCargo.innerHTML = '<option value="">Cargo: Todos</option>';
+            cargos.sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                selectCargo.appendChild(opt);
+            });
+        }
 
         if (selectFecha) {
+            selectFecha.innerHTML = '<option value="">F. Ingreso: Todas</option>';
             fechas.sort().forEach(f => {
                 const opt = document.createElement('option');
                 opt.value = f;
                 opt.textContent = f;
                 selectFecha.appendChild(opt);
+            });
+        }
+
+        // 2. Filtros Pestaña OJT (Independientes)
+        if (ojtTabSelectCampana) {
+            const campanasOjt = [...new Set(ojt.map(o => o.campana))].filter(Boolean);
+            ojtTabSelectCampana.innerHTML = '<option value="">Campaña: Todas</option>';
+            campanasOjt.sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                ojtTabSelectCampana.appendChild(opt);
+            });
+        }
+
+        if (ojtTabSelectCargo) {
+            const cargosOjt = [...new Set(ojt.map(o => o.cargo))].filter(Boolean);
+            ojtTabSelectCargo.innerHTML = '<option value="">Cargo: Todos</option>';
+            cargosOjt.sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                ojtTabSelectCargo.appendChild(opt);
+            });
+        }
+
+        if (ojtTabSelectFecha) {
+            const fechasOjt = [...new Set(ojt.map(o => o.fechaIngreso))].filter(Boolean);
+            ojtTabSelectFecha.innerHTML = '<option value="">F. Ingreso: Todas</option>';
+            fechasOjt.sort().forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                ojtTabSelectFecha.appendChild(opt);
             });
         }
     }
@@ -350,19 +405,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 9. Renderizar Tarjetas OJT (Pestaña 2)
+    function getFilteredOjtCandidates() {
+        return ojt.filter(o => {
+            const matchesSearch = !ojtTabSearchQuery || 
+                                 (o.nombre && o.nombre.toLowerCase().includes(ojtTabSearchQuery.toLowerCase())) || 
+                                 (o.documento && o.documento.includes(ojtTabSearchQuery)) ||
+                                 (o.fechaIngreso && o.fechaIngreso.toLowerCase().includes(ojtTabSearchQuery.toLowerCase()));
+            const matchesCampana = !ojtTabFilterCampana || o.campana === ojtTabFilterCampana;
+            const matchesCargo = !ojtTabFilterCargo || o.cargo === ojtTabFilterCargo;
+            const matchesFecha = !ojtTabFilterFecha || o.fechaIngreso === ojtTabFilterFecha;
+
+            return matchesSearch && matchesCampana && matchesCargo && matchesFecha;
+        });
+    }
+
     function renderOjtCards() {
         if (!ojtGrid) return;
         ojtGrid.innerHTML = '';
 
-        // Filtrar ojt
-        const filteredOjt = ojt.filter(o => {
-            const matchesSearch = !searchQuery || 
-                                 (o.nombre && o.nombre.toLowerCase().includes(searchQuery.toLowerCase())) || 
-                                 (o.documento && o.documento.includes(searchQuery));
-            const candidateCampana = o.campana || o["CAMPAÑA"] || "";
-            const matchesCampana = !filterCampana || candidateCampana === filterCampana;
-            return matchesSearch && matchesCampana;
-        });
+        // Filtrar ojt con filtros propios de la pestaña OJT
+        const filteredOjt = getFilteredOjtCandidates();
 
         if (filteredOjt.length === 0) {
             ojtGrid.innerHTML = '<div class="no-data-msg">No se encontraron aprobados en OJT con los filtros actuales.</div>';
@@ -575,49 +637,113 @@ document.addEventListener('DOMContentLoaded', () => {
         cardAverage.addEventListener('click', openChartsModal);
     }
 
-    // 12. Gestión de Filtros
-    searchInput.addEventListener('input', (e) => {
-        searchQuery = e.target.value;
-        applyAllFilters();
-    });
+    // 12. Gestión de Filtros - Pestaña Registro
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderCandidates();
+        });
+    }
 
-    selectCampana.addEventListener('change', (e) => {
-        filterCampana = e.target.value;
-        applyAllFilters();
-    });
+    if (selectCampana) {
+        selectCampana.addEventListener('change', (e) => {
+            filterCampana = e.target.value;
+            renderCandidates();
+        });
+    }
 
-    selectCargo.addEventListener('change', (e) => {
-        filterCargo = e.target.value;
-        applyAllFilters();
-    });
+    if (selectCargo) {
+        selectCargo.addEventListener('change', (e) => {
+            filterCargo = e.target.value;
+            renderCandidates();
+        });
+    }
 
     if (selectFecha) {
         selectFecha.addEventListener('change', (e) => {
             filterFecha = e.target.value;
-            applyAllFilters();
+            renderCandidates();
         });
     }
 
-    selectEstado.addEventListener('change', (e) => {
-        filterEstado = e.target.value;
-        applyAllFilters();
-    });
+    if (selectEstado) {
+        selectEstado.addEventListener('change', (e) => {
+            filterEstado = e.target.value;
+            renderCandidates();
+        });
+    }
 
-    btnClearFilters.addEventListener('click', () => {
-        searchInput.value = '';
-        selectCampana.value = '';
-        selectCargo.value = '';
-        if (selectFecha) selectFecha.value = '';
-        selectEstado.value = '';
-        
-        searchQuery = '';
-        filterCampana = '';
-        filterCargo = '';
-        filterFecha = '';
-        filterEstado = '';
-        
-        applyAllFilters();
-    });
+    if (btnClearFilters) {
+        btnClearFilters.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            if (selectCampana) selectCampana.value = '';
+            if (selectCargo) selectCargo.value = '';
+            if (selectFecha) selectFecha.value = '';
+            if (selectEstado) selectEstado.value = '';
+            
+            searchQuery = '';
+            filterCampana = '';
+            filterCargo = '';
+            filterFecha = '';
+            filterEstado = '';
+            
+            renderCandidates();
+        });
+    }
+
+    // Gestión de Filtros - Pestaña OJT (Independiente)
+    if (ojtTabSearchInput) {
+        ojtTabSearchInput.addEventListener('input', (e) => {
+            ojtTabSearchQuery = e.target.value;
+            renderOjtCards();
+        });
+    }
+
+    if (ojtTabSelectCampana) {
+        ojtTabSelectCampana.addEventListener('change', (e) => {
+            ojtTabFilterCampana = e.target.value;
+            renderOjtCards();
+        });
+    }
+
+    if (ojtTabSelectCargo) {
+        ojtTabSelectCargo.addEventListener('change', (e) => {
+            ojtTabFilterCargo = e.target.value;
+            renderOjtCards();
+        });
+    }
+
+    if (ojtTabSelectFecha) {
+        ojtTabSelectFecha.addEventListener('change', (e) => {
+            ojtTabFilterFecha = e.target.value;
+            renderOjtCards();
+        });
+    }
+
+    if (ojtTabSelectEstado) {
+        ojtTabSelectEstado.addEventListener('change', (e) => {
+            ojtTabFilterEstado = e.target.value;
+            renderOjtCards();
+        });
+    }
+
+    if (ojtTabBtnClearFilters) {
+        ojtTabBtnClearFilters.addEventListener('click', () => {
+            if (ojtTabSearchInput) ojtTabSearchInput.value = '';
+            if (ojtTabSelectCampana) ojtTabSelectCampana.value = '';
+            if (ojtTabSelectCargo) ojtTabSelectCargo.value = '';
+            if (ojtTabSelectFecha) ojtTabSelectFecha.value = '';
+            if (ojtTabSelectEstado) ojtTabSelectEstado.value = '';
+            
+            ojtTabSearchQuery = '';
+            ojtTabFilterCampana = '';
+            ojtTabFilterCargo = '';
+            ojtTabFilterFecha = '';
+            ojtTabFilterEstado = '';
+            
+            renderOjtCards();
+        });
+    }
 
     function applyAllFilters() {
         renderCandidates();
@@ -1074,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="font-weight: 700; font-size: 0.85rem; min-width: 38px; text-align: right;">${adherenceVal}%</span>
                     </div>
                 </td>
-                <td>${statusBadge}</td>
+                <td>${dayNum === 1 ? statusBadge : ''}</td>
             `;
             tbody.appendChild(tr);
         }
